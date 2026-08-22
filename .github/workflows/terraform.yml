@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'infra/**'
+      - '.github/workflows/**'
 
 env:
   # The GCP project ID is injected here via GitHub Secrets.
