@@ -6,8 +6,13 @@ This directory contains the Infrastructure as Code (IaC) for the DBPlay applicat
 
 As per the architectural guidelines, the infrastructure is broken down into highly modular, granular components:
 
-- `main.tf`: The primary orchestrator. It receives injected environment variables (such as the GCP Project ID) from GitHub Actions and calls individual modules for each resource.
+- `main.tf`: The core entry point defining terraform requirements and backends.
+- `commons.tf`: Stores shared configurations like variables, providers, and common locals (tags) used across all resources.
+- `vpc.tf`: Declares the networking module for the DBExp VPC. Note: Terraform automatically merges all `.tf` files in this directory, so `vpc.tf` and `commons.tf` do not need to be explicitly "included" in `main.tf`.
 - `SystemDesign.md`: The detailed architectural documentation, tracking the design and rationale behind every component.
+
+### Modules Added
+- `networking`: Creates the foundational Virtual Private Cloud (VPC), currently named `dbexp-vpc`.
 
 ## Execution via GitHub Actions (GitOps)
 **Important:** Do not execute Terraform commands locally. 

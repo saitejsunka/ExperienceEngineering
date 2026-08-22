@@ -18,10 +18,15 @@ This document tracks the system design, architectural decisions, and techniques 
 **Problem:** Keeping Terraform code clean and easily readable.
 - **Technique (Highly Optimized - Chosen):** Terraform Modules. The `main.tf` file acts only as an orchestrator and entry point for CI/CD, dynamically accepting variables and calling separate sub-folders for each resource under a `modules/` directory.
 
-## Current State
-- Set up foundational Terraform entry point (`main.tf`) ready to consume variables from CI/CD.
-- Created GitHub Actions Workflow (`.github/workflows/terraform.yml`) as the sole executor.
-
 ### 3. CI/CD Testing Strategy
 **Problem:** Validating that infrastructure automation scripts (`terraform.yml`) work correctly before pushing to production.
 - **Technique (Optimized - Chosen):** Push-Based Verification. We test the pipeline by pushing infrastructure changes to feature branches. The pipeline is configured to detect any push and run `terraform plan` safely on non-main branches. This allows engineers to verify the execution dry-run in the GitHub Actions console without needing to raise Pull Requests or modify live infrastructure.
+
+### 4. Networking Infrastructure (Multi-Region)
+**Problem:** Establishing a secure, high-availability, low-latency foundation for all DBPlay resources serving the entire United States.
+- **Technique (Optimized - Chosen):** Global VPC with Dynamic Regional Subnets. We configured the `dbexp-vpc` with `routing_mode = "GLOBAL"`. Instead of hardcoding subnets, the networking module takes a list of target regions (`us-east1`, `us-central1`, `us-west1`) and dynamically provisions a subnet in each region using Terraform's `for_each` and `cidrsubnet` functions. This ensures the app can scale across the US instantly while maintaining strict, centralized network boundaries.
+
+## Current State
+- **File Structure Reorganization:** Separated concerns by splitting the root infrastructure into `main.tf` (core terraform config), `commons.tf` (shared variables, locals, providers), and `vpc.tf` (networking module call). This allows for cleaner, domain-specific `.tf` files instead of a bloated `main.tf`.
+- Created GitHub Actions Workflow (`.github/workflows/terraform.yml`) as the sole executor.
+- Implemented the `networking` module and initialized the `dbexp-vpc` network via `vpc.tf`.
