@@ -1,4 +1,4 @@
-name: 'Terraform CI/CD'
+name: 'Terraform GCP Portfolio Backend Deployment - CI/CD'
 
 on:
   push:

@@ -22,3 +22,18 @@ To test whether the `terraform.yml` configuration works:
 1. **GitHub Secrets:** Ensure that `GCP_PROJECT_ID` and `GCP_CREDENTIALS` are configured as secrets in your GitHub repository settings.
 2. **Push to any Branch:** Commit your changes and push them. This triggers the GitHub Action to run `terraform plan` (if on a feature branch) or `terraform apply` (if on `main`).
 3. **Observe the Actions Tab:** Go to the "Actions" tab in GitHub to review the output of the workflow. You will see exactly what Terraform plans to create without actually provisioning resources (unless you pushed directly to `main`).
+
+## Troubleshooting
+### Error: `google-github-actions/auth failed...`
+If your GitHub Action fails with the error:
+> `the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"! If you are specifying input values via GitHub secrets, ensure the secret is being injected into the environment.`
+
+**Cause:** This happens because the `${{ secrets.GCP_CREDENTIALS }}` variable is evaluating to an empty string, meaning GitHub cannot find the secret in your repository.
+**Fix:**
+1. Go to your GitHub Repository -> **Settings**.
+2. Scroll down on the left sidebar to **Secrets and variables** -> **Actions**.
+3. Click **New repository secret**.
+4. Name it `GCP_CREDENTIALS`.
+5. Paste the entire JSON content of your Google Cloud Service Account Key into the "Secret" field and click **Add secret**.
+6. (Also make sure to add `GCP_PROJECT_ID` while you are there).
+7. Go back to the **Actions** tab and re-run the failed job.
