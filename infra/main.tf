@@ -8,11 +8,13 @@
 # ==============================================================================
 
 terraform {
-  # Remote backend for state management should be configured here.
-  # backend "gcs" {
-  #   bucket  = "my-terraform-state-bucket"
-  #   prefix  = "terraform/state"
-  # }
+  # Remote backend for state management
+  # IMPORTANT: GCS bucket names must be globally unique.
+  # Create this bucket manually in your GCP console before pushing!
+  backend "gcs" {
+    bucket  = "REPLACE_WITH_YOUR_GLOBALLY_UNIQUE_BUCKET_NAME"
+    prefix  = "terraform/state"
+  }
 
   required_providers {
     google = {

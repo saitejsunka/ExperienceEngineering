@@ -22,6 +22,16 @@ This infrastructure is strictly governed by CI/CD through GitHub Actions.
 - **Environment Variables:** Credentials and configuration (like `GCP_PROJECT_ID` and `GCP_CREDENTIALS`) must be stored as GitHub Repository Secrets.
 - **Process:** Whenever code in this `infra/` folder is pushed to any branch, GitHub Actions will trigger automatically. Pushes to non-main branches will run a `terraform plan` for review. Pushes to the `main` branch will automatically run `terraform apply`.
 
+## Remote State Configuration (CRITICAL)
+Terraform tracks the status of your infrastructure using a "State File". Because GitHub Actions destroys its runner after every execution, **we must store this file in a Google Cloud Storage (GCS) Bucket**. 
+
+Before you push any infrastructure code, you must:
+1. Go to your [Google Cloud Storage Console](https://console.cloud.google.com/storage).
+2. Click **Create Bucket**.
+3. Name it something globally unique (e.g., `dbplay-<your-initials>-tf-state`).
+4. Click **Create**.
+5. Open `infra/main.tf` in this repository and replace `REPLACE_WITH_YOUR_GLOBALLY_UNIQUE_BUCKET_NAME` with the exact bucket name you just created.
+
 ## Testing the CI/CD Pipeline
 To test whether the `terraform.yml` configuration works:
 1. **GitHub Secrets:** Ensure that `GCP_PROJECT_ID` and `GCP_CREDENTIALS` are configured as secrets in your GitHub repository settings.
@@ -42,3 +52,15 @@ If your GitHub Action fails with the error:
 5. Paste the entire JSON content of your Google Cloud Service Account Key into the "Secret" field and click **Add secret**.
 6. (Also make sure to add `GCP_PROJECT_ID` while you are there).
 7. Go back to the **Actions** tab and re-run the failed job.
+
+### Error: `Error 403: Required 'compute.networks.create' permission...`
+If your Terraform Apply fails with a 403 Forbidden error, it means the Google Cloud Service Account you provided in your `GCP_CREDENTIALS` secret does not have sufficient permissions to create resources.
+
+**Fix:**
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Navigate to **IAM & Admin** > **IAM**.
+3. Find the Service Account associated with your GitHub Actions.
+4. Click the **Edit (pencil icon)** next to it.
+5. Click **Add Another Role**.
+6. Since this Service Account is your Terraform executor, it needs broad access to provision resources. Grant it the **Editor** role (or if you want to be extremely strict, the **Compute Network Admin** role just for this VPC).
+7. Click **Save** and re-run your GitHub Action.
