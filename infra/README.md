@@ -13,6 +13,7 @@ As per the architectural guidelines, the infrastructure is broken down into high
 
 ### Modules Added
 - `networking`: Creates the foundational Virtual Private Cloud (VPC), currently named `dbexp-vpc`.
+- `firestore`: Provisions a Serverless NoSQL Multi-Region database (`nam5`) for cost-optimized global reads.
 
 ## Execution via GitHub Actions (GitOps)
 **Important:** Do not execute Terraform commands locally. 

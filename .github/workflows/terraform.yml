@@ -55,8 +55,7 @@ jobs:
         echo "Enabling necessary GCP APIs..."
         gcloud services enable \
           cloudresourcemanager.googleapis.com \
-          servicenetworking.googleapis.com \
-          sqladmin.googleapis.com \
+          firestore.googleapis.com \
           compute.googleapis.com
 
     - name: Terraform Init
