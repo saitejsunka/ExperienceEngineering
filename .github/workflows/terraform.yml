@@ -49,6 +49,15 @@ jobs:
         echo "Injecting bucket name into main.tf..."
         sed -i "s/__BACKEND_BUCKET_NAME__/$BUCKET_NAME/g" main.tf
 
+    - name: Enable Required GCP APIs
+      run: |
+        echo "Enabling necessary GCP APIs..."
+        gcloud services enable \
+          cloudresourcemanager.googleapis.com \
+          servicenetworking.googleapis.com \
+          sqladmin.googleapis.com \
+          compute.googleapis.com
+
     - name: Terraform Init
       run: terraform init
 
