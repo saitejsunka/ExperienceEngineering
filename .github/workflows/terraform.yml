@@ -1,0 +1,44 @@
+name: 'Terraform CI/CD'
+
+on:
+  push:
+    paths:
+      - 'infra/**'
+
+env:
+  # The GCP project ID is injected here via GitHub Secrets.
+  # Terraform will automatically pick this up if mapped correctly, or we can pass it as a TF_VAR.
+  TF_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # Best practice for GCP Authentication is Workload Identity Federation,
+    # but for simplicity, you can use a Service Account JSON Key stored in secrets.
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: terraform plan
+      if: github.ref != 'refs/heads/main'
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main'
+      run: terraform apply -auto-approve
