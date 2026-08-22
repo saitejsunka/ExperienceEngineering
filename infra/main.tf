@@ -8,11 +8,10 @@
 # ==============================================================================
 
 terraform {
-  # Remote backend for state management
-  # IMPORTANT: GCS bucket names must be globally unique.
-  # Create this bucket manually in your GCP console before pushing!
+  # Remote backend for state management.
+  # The bucket is automatically created and injected by GitHub Actions.
   backend "gcs" {
-    bucket  = "REPLACE_WITH_YOUR_GLOBALLY_UNIQUE_BUCKET_NAME"
+    bucket  = "__BACKEND_BUCKET_NAME__"
     prefix  = "terraform/state"
   }
 

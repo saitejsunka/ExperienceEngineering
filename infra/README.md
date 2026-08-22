@@ -22,15 +22,10 @@ This infrastructure is strictly governed by CI/CD through GitHub Actions.
 - **Environment Variables:** Credentials and configuration (like `GCP_PROJECT_ID` and `GCP_CREDENTIALS`) must be stored as GitHub Repository Secrets.
 - **Process:** Whenever code in this `infra/` folder is pushed to any branch, GitHub Actions will trigger automatically. Pushes to non-main branches will run a `terraform plan` for review. Pushes to the `main` branch will automatically run `terraform apply`.
 
-## Remote State Configuration (CRITICAL)
-Terraform tracks the status of your infrastructure using a "State File". Because GitHub Actions destroys its runner after every execution, **we must store this file in a Google Cloud Storage (GCS) Bucket**. 
+## Remote State Configuration
+Terraform tracks the status of your infrastructure using a "State File". Because GitHub Actions destroys its runner after every execution, **we store this file in a Google Cloud Storage (GCS) Bucket**. 
 
-Before you push any infrastructure code, you must:
-1. Go to your [Google Cloud Storage Console](https://console.cloud.google.com/storage).
-2. Click **Create Bucket**.
-3. Name it something globally unique (e.g., `dbplay-<your-initials>-tf-state`).
-4. Click **Create**.
-5. Open `infra/main.tf` in this repository and replace `REPLACE_WITH_YOUR_GLOBALLY_UNIQUE_BUCKET_NAME` with the exact bucket name you just created.
+This bucket is created and managed **automatically** by the GitHub Actions workflow! The pipeline generates a globally unique bucket name (e.g., `dbplay-<your-project-id>-tf-state`), creates the bucket if it doesn't exist, and injects it into `main.tf` before running Terraform. You do not need to manually configure the bucket.
 
 ## Testing the CI/CD Pipeline
 To test whether the `terraform.yml` configuration works:

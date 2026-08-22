@@ -32,6 +32,23 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
+    - name: Ensure Terraform State Bucket Exists
+      run: |
+        # Generate a globally unique bucket name using the Project ID
+        BUCKET_NAME="dbplay-${{ secrets.GCP_PROJECT_ID }}-tf-state"
+        
+        echo "Checking if bucket gs://$BUCKET_NAME exists..."
+        # If the bucket doesn't exist (returns error), create it. Similar to UPSERT.
+        if ! gcloud storage buckets describe gs://$BUCKET_NAME &>/dev/null; then
+          echo "Bucket does not exist. Creating..."
+          gcloud storage buckets create gs://$BUCKET_NAME --location=US
+        else
+          echo "Bucket already exists."
+        fi
+        
+        echo "Injecting bucket name into main.tf..."
+        sed -i "s/__BACKEND_BUCKET_NAME__/$BUCKET_NAME/g" main.tf
+
     - name: Terraform Init
       run: terraform init
 
