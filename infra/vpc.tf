@@ -6,7 +6,7 @@
 
 module "networking" {
   source     = "./modules/networking"
-  vpc_name   = "dbexp-vpc"
+  vpc_name   = "dbexp-vpc-2"
   project_id = var.gcp_project_id
   regions    = var.us_regions
 }
