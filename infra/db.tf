@@ -1,10 +1,10 @@
 # ==============================================================================
 # Database Configuration (db.tf)
 # ==============================================================================
-# Instantiates the Multi-Region Firestore Database setup.
+# Instantiates the Primary and Replica PostgreSQL Database setup.
 
-module "firestore" {
-  source      = "./modules/firestore"
-  project_id  = var.gcp_project_id
-  location_id = "nam5" # North America Multi-Region
+module "database" {
+  source     = "./modules/database"
+  vpc_id     = module.networking.vpc_id
+  project_id = var.gcp_project_id
 }

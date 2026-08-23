@@ -26,11 +26,11 @@ This document tracks the system design, architectural decisions, and techniques 
 **Problem:** Establishing a secure, high-availability, low-latency foundation for all DBPlay resources serving the entire United States.
 - **Technique (Optimized - Chosen):** Global VPC with Dynamic Regional Subnets. We configured the `dbexp-vpc` with `routing_mode = "GLOBAL"`. Instead of hardcoding subnets, the networking module takes a list of target regions (`us-east1`, `us-central1`, `us-west1`) and dynamically provisions a subnet in each region using Terraform's `for_each` and `cidrsubnet` functions. This ensures the app can scale across the US instantly while maintaining strict, centralized network boundaries.
 
-### 5. Database Architecture (Cost Optimization & High Availability)
-**Problem:** A traditional Cloud SQL (PostgreSQL) setup with 1 Primary and 3 Replicas costs roughly $45-$55/month, which exceeds our $50/month overall project budget constraint. However, we still need a globally scalable database for instantaneous reads.
-- **Technique (Optimized - Chosen):** Serverless NoSQL via Google Cloud Firestore.
-  - **Availability & Scaling:** Deployed in the `nam5` Multi-Region. This automatically replicates our data across three separate US locations (US-Central, US-East, US-West) without needing manual replica orchestration.
-  - **Cost Management:** Firestore uses a usage-based pricing model with a massive free tier (50,000 free reads/day). For this project, the monthly database cost will essentially be $0.00 while maintaining Enterprise-grade global replication.
+### 5. Database Architecture (CQRS Pattern vs Cost Optimization)
+**Problem:** How to structure the database to support heavy global reads while maintaining consistency on writes.
+- **Technique (Explicit Control - Chosen):** Cloud SQL PostgreSQL (Primary-Replica Architecture).
+  - **Rationale:** While Serverless NoSQL (Firestore) would reduce costs to near $0.00, it abstracts away database networking and manual CQRS (Command Query Responsibility Segregation) routing. To maximize learning outcomes and simulate enterprise backend patterns, we explicitly chose to deploy a traditional SQL setup: 1 Primary (Write) node and 2 Replica (Read) nodes across `us-west1` and `us-east1`.
+  - **Cost Management:** By selecting the absolute smallest instance size (`db-f1-micro`) and minimum SSD storage (10 GB) for each of the 3 databases, the total database cost is maintained at ~$32/month. This safely fits inside the $50/month project constraint.
 
 ## Current State
 - **File Structure Reorganization:** Separated concerns by splitting the root infrastructure into `main.tf` (core terraform config), `commons.tf` (shared variables, locals, providers), and `vpc.tf` (networking module call). This allows for cleaner, domain-specific `.tf` files instead of a bloated `main.tf`.
