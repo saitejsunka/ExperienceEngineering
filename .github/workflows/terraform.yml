@@ -1,5 +1,10 @@
 name: 'Terraform GCP Portfolio Backend Deployment - CI/CD'
 
+# This guarantees only one run happens at a time, queueing any new commits
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
 on:
   push:
     paths:
