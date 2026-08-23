@@ -1,6 +1,6 @@
 resource "google_firestore_database" "database" {
   project     = var.project_id
-  name        = "(default)"
+  name        = "dbexp-id"
   location_id = var.location_id
   type        = "FIRESTORE_NATIVE"
   
