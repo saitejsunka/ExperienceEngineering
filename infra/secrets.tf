@@ -10,6 +10,10 @@ resource "google_secret_manager_secret" "dbexp_config" {
   replication {
     auto {}
   }
+
+  depends_on = [
+    google_project_service.enabled_apis
+  ]
 }
 
 resource "google_secret_manager_secret_version" "dbexp_config_version" {
