@@ -1,8 +1,15 @@
 # Build stage
 FROM golang:alpine AS builder
 
-# Install CA certificates and tzdata for SSL/TLS and timezones
-RUN apk add --no-cache ca-certificates tzdata
+# Install CA certificates, tzdata, and protobuf compiler for generating stubs
+RUN apk add --no-cache ca-certificates tzdata protoc protobuf-dev
+
+# Install protoc go plugins
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Add go binaries to PATH
+ENV PATH="$PATH:/go/bin"
 
 WORKDIR /app
 
@@ -12,6 +19,12 @@ RUN go mod download
 
 # Copy the entire backend directory (which includes the service folder)
 COPY . .
+
+# Generate the gRPC stubs since they are ignored by .gitignore and not pushed to GitHub
+RUN mkdir -p stubs
+RUN protoc -I contracts --go_out=stubs --go_opt=paths=source_relative \
+       --go-grpc_out=stubs --go-grpc_opt=paths=source_relative \
+       dbexp.proto
 
 # Build the Go application
 # -ldflags="-w -s" strips debug info for a smaller binary
