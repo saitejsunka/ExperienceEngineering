@@ -45,10 +45,15 @@ func main() {
 	// 4. Initialize the gRPC Service implementation
 	grpcHandler := NewDBExpServer(healthProducer)
 
-	// 5. Start standard gRPC server
-	lis, err := net.Listen("tcp", ":8080")
+	// 5. Start standard gRPC server on 8050
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8050"
+	}
+
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		telemetry.LogError("Failed to listen on port 8080", err)
+		telemetry.LogError("Failed to listen on port "+port, err)
 		return
 	}
 
@@ -58,7 +63,7 @@ func main() {
 	// Enable Server Reflection for tools like grpcurl/Postman
 	reflection.Register(s)
 
-	log.Println("DBExpService gRPC server listening on port 8080...")
+	log.Printf("DBExpService gRPC server listening on port %s...\n", port)
 	telemetry.LogInfo("Starting DBExpService", nil)
 
 	if err := s.Serve(lis); err != nil {
