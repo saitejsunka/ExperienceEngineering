@@ -1,34 +1,51 @@
 package configs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 )
 
 // AppConfig holds all the configuration for the application
 type AppConfig struct {
 	GCPProjectID     string `json:"GCPProjectID"`
 	DatabaseHost     string `json:"DatabaseHost"`
-	DatabasePort     int    `json:"DatabasePort"`
+	DatabasePort     string `json:"DatabasePort"`
 	DatabaseUser     string `json:"DatabaseUser"`
 	DatabasePassword string `json:"DatabasePassword"`
 	DatabaseName     string `json:"DatabaseName"`
 }
 
-// LoadConfig reads the .config file from the given path and parses it into AppConfig
-func LoadConfig(path string) (*AppConfig, error) {
-	file, err := os.Open(path)
+// LoadConfigFromSecretManager fetches the configuration JSON from GCP Secret Manager
+func LoadConfigFromSecretManager(ctx context.Context, projectID, secretName string) (*AppConfig, error) {
+	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open config file: %w", err)
+		return nil, fmt.Errorf("failed to create secret manager client: %w", err)
 	}
-	defer file.Close()
+	defer client.Close()
 
-	var config AppConfig
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&config); err != nil {
-		return nil, fmt.Errorf("failed to decode config JSON: %w", err)
+	// Build the request
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretName),
 	}
+
+	// Call the API
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to access secret version: %w", err)
+	}
+
+	// Unmarshal the payload
+	var config AppConfig
+	if err := json.Unmarshal(result.Payload.Data, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal secret payload: %w", err)
+	}
+
+	// Assign the project ID into the config as well
+	config.GCPProjectID = projectID
 
 	return &config, nil
 }

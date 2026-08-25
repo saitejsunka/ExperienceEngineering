@@ -1,98 +1,59 @@
 # DBExp Backend Service
 
-This is the backend service for the DBExp project, responsible for handling business logic and communicating with the PostgreSQL database. It is implemented as a **gRPC service** running on Google Cloud Run.
+This is the backend service for the DBExp project, responsible for handling business logic and communicating with the PostgreSQL database. It is implemented as a **gRPC service** using Go.
 
-## Architecture
+## Architecture & Code Structure
 
-The backend utilizes a **Producer-Consumer** architecture pattern:
-- **Producer (gRPC Handlers):** Receives the incoming gRPC request, validates the input, and constructs a query request. It then passes this request to the Consumer.
-- **Consumer (Database Workers):** Receives the query request from the Producer, executes the actual database calls against Cloud SQL, and returns the result back to the Producer. 
+The backend utilizes a decoupled **Producer-Consumer** architecture pattern mapped strictly to the folder structure:
+- **`service/producers/`**: Receives the incoming gRPC request, validates the input, enforces business rules, and delegates raw queries to the Consumer layer.
+- **`service/consumers/`**: Handles all infrastructure concerns, primarily executing database queries against Cloud SQL via `database/sql` and `lib/pq`.
 
-Currently, the Consumer layer **mocks** the database calls (returning successful responses) until the database schema and connections are fully integrated.
+### Service Initialization
+The entry point of the service is `main.go`. It follows a strict initialization order:
+1. **Telemetry**: Initializes global GCP Cloud Logging first.
+2. **Configuration**: Pulls database credentials securely from GCP Secret Manager (using the Telemetry logger to capture failures).
+3. **Dependency Injection**: Wires the Consumer and Producer structs together and mounts them to the gRPC Server.
 
-## gRPC APIs
+## Development & Local Setup
 
-The service is defined by the `proto/dbexp.proto` contract. It exposes the following Remote Procedure Calls (RPCs):
-
-### 1. `CheckHealth`
-A standard health check endpoint to verify the service is running.
-- **Returns:** `{ status_code: 200, message: "..." }`
-
-### 2. `UpsertPost`
-Creates a new post or updates an existing one based on the `post_id`.
-- **Request:**
-  ```protobuf
-  {
-    string post_id = 1;
-    string title = 2;
-    string content = 3;
-    string author = 4;
-  }
-  ```
-- **Returns:** `{ status_code: 200, message: "..." }`
-
-### 3. `ReadPost`
-Fetches a post by its `post_id`.
-- **Request:**
-  ```protobuf
-  {
-    string post_id = 1;
-  }
-  ```
-- **Returns:** `{ status_code: 200, post_id: "...", title: "...", content: "...", author: "..." }`
-
-*(Note: While gRPC natively handles errors via gRPC status codes, we explicitly include HTTP-like `status_code` fields in the response payloads for granular internal tracking).*
-
-## Development & Deployment
-
-- **Containerization:** The backend is compiled and packaged into a minimal, multi-stage Docker container.
-- **CI/CD:** A GitHub Actions workflow automatically builds the Docker image, pushes it to Google Artifact Registry, and deploys the new revision.
-- **Platform:** Google Cloud Run (Configured to scale between 1 and 2 instances maximum).
-
-## Generating gRPC Stubs (Golang)
-
-To write the actual backend code, you need to "compile" the `.proto` contract into Go code (called "stubs"). These stubs provide the interfaces and structs that your Go code will use.
-
-### 1. Prerequisites & Installations
-
-Since you are on a Mac, you can install the Protocol Buffers compiler (`protoc`) using Homebrew:
+### 1. Prerequisites
+You will need the Protocol Buffers compiler (`protoc`) and the Go gRPC plugins:
 
 ```bash
+# Mac Installation
 brew install protobuf
-```
 
-Next, initialize a Go module in the `backend` directory so Go can track your dependencies:
-
-```bash
-go mod init dbexp/backend
-```
-
-Then, you need to install the Go-specific plugins for `protoc`. These plugins generate standard Go code and gRPC-specific Go code. Make sure you have Go installed, then run:
-
-```bash
+# Install Go Plugins
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 ```
 
-*Note: Ensure your `$(go env GOPATH)/bin` directory is in your system's `$PATH` so the `protoc` compiler can find these plugins.*
+*Ensure your `$(go env GOPATH)/bin` is in your system's `$PATH`.*
 
-### 2. Compiling the Proto Files
-
-Once the tools are installed, open your terminal, navigate to the `backend` directory, and run the following command to generate the stubs in a dedicated `stubs` directory:
+### 2. Compiling Proto Contracts
+To generate the Go stubs from the `dbexp.proto` definition, run this from the `backend/` directory:
 
 ```bash
-mkdir -p stubs
 export PATH="$PATH:$(go env GOPATH)/bin"
 protoc -I contracts --go_out=stubs --go_opt=paths=source_relative \
        --go-grpc_out=stubs --go-grpc_opt=paths=source_relative \
        dbexp.proto
 ```
+This updates `stubs/dbexp.pb.go` and `stubs/dbexp_grpc.pb.go`.
 
-**What does this do?**
-- `-I contracts` tells the compiler to look in the `contracts` directory for the proto file.
-- `--go_out=stubs` generates the core Protocol Buffer Go structures (like `CheckHealthRequest`) inside the `stubs` folder.
-- `--go-grpc_out=stubs` generates the gRPC service code (like the `DBExpServiceClient` and `DBExpServiceServer` interfaces) inside the `stubs` folder.
+### 3. Running the Service
+The service requires two environment variables to successfully fetch its configuration from Secret Manager:
+- `GCP_PROJECT_ID`: Your GCP Project ID.
+- `DB_SECRET_NAME`: The name of the secret in Secret Manager (e.g., `dbexp-backend-config`).
 
-After running this command, you will see two new files generated inside the `stubs/` folder:
-- `dbexp.pb.go`
-- `dbexp_grpc.pb.go`
+To run locally:
+```bash
+export GCP_PROJECT_ID="your-project-id"
+export DB_SECRET_NAME="dbexp-backend-config"
+
+go mod tidy
+go build -o server ./service
+./server
+```
+
+*(Note: For infrastructure, deployment, or architecture decisions, see `infra/README.md` and `infra/SystemDesign.md` respectively).*
