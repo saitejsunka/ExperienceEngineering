@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package dbexp.v1;
 
-option go_package = "dbexp/backend/proto/dbexp/v1;dbexpv1";
+option go_package = "dbexp/backend/stubs;stubs";
 
 // DBExpService defines the backend APIs for interacting with the database.
 service DBExpService {

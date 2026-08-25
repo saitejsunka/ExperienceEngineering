@@ -78,19 +78,21 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 ### 2. Compiling the Proto Files
 
-Once the tools are installed, open your terminal, navigate to the `backend` directory, and run the following command:
+Once the tools are installed, open your terminal, navigate to the `backend` directory, and run the following command to generate the stubs in a dedicated `stubs` directory:
 
 ```bash
-protoc --go_out=. --go_opt=paths=source_relative \
-       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-       proto/dbexp.proto
+mkdir -p stubs
+export PATH="$PATH:$(go env GOPATH)/bin"
+protoc -I contracts --go_out=stubs --go_opt=paths=source_relative \
+       --go-grpc_out=stubs --go-grpc_opt=paths=source_relative \
+       dbexp.proto
 ```
 
 **What does this do?**
-- `--go_out=.` generates the core Protocol Buffer Go structures (like `CheckHealthRequest`).
-- `--go-grpc_out=.` generates the gRPC service code (like the `DBExpServiceClient` and `DBExpServiceServer` interfaces).
-- `paths=source_relative` tells the compiler to place the generated `.pb.go` files right next to the original `.proto` file in the `proto/` directory.
+- `-I contracts` tells the compiler to look in the `contracts` directory for the proto file.
+- `--go_out=stubs` generates the core Protocol Buffer Go structures (like `CheckHealthRequest`) inside the `stubs` folder.
+- `--go-grpc_out=stubs` generates the gRPC service code (like the `DBExpServiceClient` and `DBExpServiceServer` interfaces) inside the `stubs` folder.
 
-After running this command, you will see two new files generated inside the `proto/` folder:
+After running this command, you will see two new files generated inside the `stubs/` folder:
 - `dbexp.pb.go`
 - `dbexp_grpc.pb.go`
