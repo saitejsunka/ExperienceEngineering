@@ -6,13 +6,18 @@ This directory contains the Infrastructure as Code (IaC) for the DBPlay applicat
 
 **Important:** Do not execute Terraform commands locally. This infrastructure is strictly governed by CI/CD to prevent state divergence and local configuration issues.
 
-### How the Pipeline Works
-1. **Workflow File:** `.github/workflows/terraform.yml`
-2. **Concurrency Queue:** The workflow uses a `concurrency` block. If multiple commits are pushed rapidly, GitHub will queue them up and run them one by one, preventing Terraform State Lock crashes.
-3. **Remote State:** Terraform tracks the status of your infrastructure in a Google Cloud Storage (GCS) Bucket.
-4. **Triggering Execution:**
-   - **Feature Branches:** Pushing to any non-main branch will trigger a `terraform plan`. This allows you to safely review intended changes in the GitHub Actions console.
-   - **Main Branch:** Pushing directly to `main` triggers `terraform apply -auto-approve`, executing the changes on GCP.
+### How the GitOps Pipelines Work
+We utilize a strict separation of concerns for CI/CD deployments:
+
+1. **Static Infrastructure (`.github/workflows/terraform.yml`)**
+   - Triggers on changes to `infra/`.
+   - Provisions all fixed GCP resources (VPC, Cloud SQL, Secret Manager, Artifact Registry).
+   - Uses remote state stored in a Google Cloud Storage (GCS) Bucket.
+
+2. **Dynamic Application (`.github/workflows/deploy.yml`)**
+   - Triggers on changes to `backend/`.
+   - Builds the Docker container, authenticates with Artifact Registry, and pushes the image.
+   - Executes `gcloud run deploy` to safely deploy the new container to Cloud Run with Direct VPC Egress enabled.
 
 ## Prerequisites & GitHub Secrets
 

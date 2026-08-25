@@ -56,4 +56,15 @@ go build -o server ./service
 ./server
 ```
 
+## Containerization & Deployment
+
+The backend service is containerized using a multi-stage Docker build, ensuring an ultra-minimal runtime (via `scratch`).
+
+- **Dockerfile**: Located at the root of `backend/`.
+- **Registry**: Built images are pushed to a Google Artifact Registry (`dbexp-repo`).
+- **Runtime**: Deployed exclusively to **Google Cloud Run** via GitHub Actions.
+- **Network Bridge**: The Cloud Run service uses Direct VPC Egress to tunnel into the private `dbexp-vpc` to securely connect to Cloud SQL.
+
+For the CI/CD deployment logic, see `.github/workflows/deploy.yml`.
+
 *(Note: For infrastructure, deployment, or architecture decisions, see `infra/README.md` and `infra/SystemDesign.md` respectively).*

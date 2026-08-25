@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Go
+vendor/
+server
+*.out
+*.exe
+*.test
+*.prof
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project folders not needed for runtime build
+infra/
+.github/
+README.md
+SystemDesign.md

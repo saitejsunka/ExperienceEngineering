@@ -1,0 +1,61 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-west1
+  REPO_NAME: dbexp-repo
+  SERVICE_NAME: dbexp-backend
+  IMAGE_NAME: us-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dbexp-repo/backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    # We must ensure Terraform has provisioned the registry first. 
+    # If both infra and backend change simultaneously, this might fail on first run if it beats Terraform, 
+    # but re-running will succeed.
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker Auth
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+    - name: Build Docker Image
+      working-directory: ./backend
+      run: |
+        docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.IMAGE_NAME }}:latest .
+
+    - name: Push Docker Image
+      run: |
+        docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.IMAGE_NAME }}:latest
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --region ${{ env.REGION }} \
+          --network dbexp-vpc \
+          --subnet dbexp-vpc-us-west1-subnet \
+          --vpc-egress all-traffic \
+          --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},DB_SECRET_NAME=dbexp-backend-config \
+          --allow-unauthenticated \
+          --use-http2

@@ -4,6 +4,11 @@ This document serves as the architectural source of truth for the DBPlay infrast
 
 ## 1. Application Layer Architecture
 
+### Containerization (Cloud Run)
+The application is deployed as a stateless Docker container to **Google Cloud Run**. This provides:
+- **Autoscaling:** Scales up automatically based on traffic volume, and scales down to zero when idle to minimize costs.
+- **Direct VPC Egress:** The Cloud Run service is injected directly into our private `dbexp-vpc` network, allowing it to communicate securely with our private Cloud SQL database without needing Serverless VPC Access Connectors or public IPs.
+
 ### Producer-Consumer Decoupling
 To enforce strict separation of concerns, the backend codebase isolates business rules from infrastructure:
 - **Producers**: Enforce application logic (e.g., verifying a post author matches the session user) and dictate *what* data is needed.
@@ -11,7 +16,7 @@ To enforce strict separation of concerns, the backend codebase isolates business
 
 ### Bootstrapping & Secret Manager Integration
 - **Trade-off:** Hardcoding credentials or using raw environment variables is an immediate security risk in production.
-- **Decision:** The application strictly retrieves database credentials (IP, Username, Password) from **GCP Secret Manager**.
+- **Decision:** The application strictly retrieves database credentials (IP, Username, Password) from **GCP Secret Manager** via Cloud Run's native secret integration as environment variables.
 - **Implementation:** The service leverages a two-phase initialization. It initializes Telemetry *first*, allowing any failure in the Secret Manager network fetch to be securely logged to GCP Cloud Logging before the application exits.
 
 ## 2. Database Architecture
