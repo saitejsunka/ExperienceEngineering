@@ -14,6 +14,7 @@ locals {
     "monitoring.googleapis.com",
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
+    "iam.googleapis.com",
   ]
 }
 
