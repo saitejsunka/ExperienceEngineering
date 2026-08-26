@@ -10,6 +10,16 @@ on:
     paths:
       - 'infra/**'
       - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action (apply or destroy)'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 env:
   # The GCP project ID is injected here via GitHub Secrets.
@@ -69,8 +79,23 @@ jobs:
 
     - name: Terraform Plan
       run: terraform plan
-      if: github.ref != 'refs/heads/main'
+      if: github.event.inputs.action != 'destroy' && github.ref != 'refs/heads/main'
 
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
+      if: github.event.inputs.action != 'destroy' && github.ref == 'refs/heads/main'
       run: terraform apply -auto-approve
+
+    - name: Force Cleanup Cloud Run & IPs (Before Destroy)
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        echo "Force deleting Cloud Run services..."
+        gcloud run services delete dbexp-backend-west --region us-west1 --quiet || true
+        gcloud run services delete dbexp-backend-east --region us-east1 --quiet || true
+        
+        echo "Force deleting locked Serverless IPs..."
+        gcloud compute addresses delete serverless-ipv4-1787707427824078083 --region us-west1 --quiet || true
+        gcloud compute addresses delete serverless-ipv4-1787707453921867123 --region us-east1 --quiet || true
+
+    - name: Terraform Destroy
+      if: github.event.inputs.action == 'destroy'
+      run: terraform destroy -auto-approve
