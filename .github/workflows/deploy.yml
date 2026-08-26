@@ -51,7 +51,7 @@ jobs:
 
     - name: Deploy to Cloud Run (US-West1)
       run: |
-        gcloud run deploy ${{ env.SERVICE_NAME }} \
+        gcloud run deploy ${{ env.SERVICE_NAME }}-west \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --region us-west1 \
           --network dbexp-vpc \
