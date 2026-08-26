@@ -44,7 +44,22 @@ We are deploying a **3-node cluster**:
 - **Trade-off:** Exposing databases to the public internet via Public IPs makes it easy to connect from local development machines, but poses a massive security vulnerability.
 - **Decision:** All Cloud SQL instances are configured **strictly with Private IPs**. We utilize VPC Peering (`servicenetworking.googleapis.com`) to bridge the Google Managed Services tenant project directly into our `dbexp-vpc`.
 
-## 4. Future Roadmap & Optimizations
+## 4. Multi-Region Database Connectivity (Read/Write Splitting)
+
+Deploying Cloud Run across multiple regions (`us-west1`, `us-east1`) requires two distinct connectivity links to function properly:
+
+### A. The Network Link (VPC Egress)
+- **Automatic Routing:** We use **Direct VPC Egress** (`--vpc-egress all-traffic`) to attach each Cloud Run instance to its local regional subnet (e.g., `us-east1` Cloud Run attaches to `dbexp-vpc-us-east1-subnet`).
+- **Global Backbone:** Because `dbexp-vpc` is a Global VPC, an instance in `us-east1` can instantly route traffic to a private IP in `us-west1` over Google's internal fiber network. The network routing is fully automatic.
+
+### B. The Application Link (CQRS Pattern)
+- **Manual Implementation:** Network routing does not imply query intelligence. By default, a backend application will send all queries (Reads and Writes) to a single database URL, completely ignoring read replicas.
+- **CQRS Requirement:** To utilize regional read replicas, the Go application must be explicitly programmed to maintain **two separate connection pools**:
+  1. `dbWrite`: Points exclusively to the `us-west1` Primary Node for all `INSERT`/`UPDATE`/`DELETE` operations.
+  2. `dbRead`: Points to the geographically closest Read Replica (e.g., `dbexp-read-east` for the `us-east1` instance) for all `SELECT` operations.
+- **Deployment Strategy:** The CI/CD pipeline injects region-specific IPs into the containers as environment variables (e.g., `DB_WRITE_HOST` and `DB_READ_HOST`) during the `gcloud run deploy` step.
+
+## 5. Future Roadmap & Optimizations
 
 1. **Application-Layer CQRS:** Implementing the backend logic to seamlessly route `INSERT`/`UPDATE` queries to the primary node and load-balance `SELECT` queries across the read replicas.
 2. **Connection Pooling:** Introducing PgBouncer to manage connection exhaustion limits inherent to `db-f1-micro` instances.
