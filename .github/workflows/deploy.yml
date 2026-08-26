@@ -49,13 +49,27 @@ jobs:
         docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.IMAGE_NAME }}:latest
 
-    - name: Deploy to Cloud Run
+    - name: Deploy to Cloud Run (US-West1)
       run: |
         gcloud run deploy ${{ env.SERVICE_NAME }} \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-          --region ${{ env.REGION }} \
+          --region us-west1 \
           --network dbexp-vpc \
           --subnet dbexp-vpc-us-west1-subnet \
+          --vpc-egress all-traffic \
+          --port 8050 \
+          --service-account dbexp-run-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+          --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},DB_SECRET_NAME=dbexp-backend-config \
+          --allow-unauthenticated \
+          --use-http2
+
+    - name: Deploy to Cloud Run (US-East1)
+      run: |
+        gcloud run deploy ${{ env.SERVICE_NAME }}-east \
+          --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --region us-east1 \
+          --network dbexp-vpc \
+          --subnet dbexp-vpc-us-east1-subnet \
           --vpc-egress all-traffic \
           --port 8050 \
           --service-account dbexp-run-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
