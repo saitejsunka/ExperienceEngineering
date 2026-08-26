@@ -59,7 +59,28 @@ Deploying Cloud Run across multiple regions (`us-west1`, `us-east1`) requires tw
   2. `dbRead`: Points to the geographically closest Read Replica (e.g., `dbexp-read-east` for the `us-east1` instance) for all `SELECT` operations.
 - **Deployment Strategy:** The CI/CD pipeline injects region-specific IPs into the containers as environment variables (e.g., `DB_WRITE_HOST` and `DB_READ_HOST`) during the `gcloud run deploy` step.
 
-## 5. Future Roadmap & Optimizations
+## 5. Traffic Flow & API Security Architecture
+
+Understanding the boundaries of the cloud environment is critical for enforcing security, rate limiting, and optimal traffic routing.
+
+### A. The Client (Frontend) is Unprotected
+- The "Frontend" (HTML/JS/CSS) is a static package downloaded to the user's personal device (browser or mobile phone) via a CDN. 
+- Because it runs locally on the user's hardware, it is fundamentally **untrusted and mathematically unprotected**. A malicious user can bypass any frontend restrictions.
+- **Frontend Rate Limiting:** The concept of "rate limiting" on the frontend only exists for User Experience (UX)—e.g., disabling a submit button to prevent accidental double-clicks or catching backend HTTP 429 errors. True security must happen on the backend.
+
+### B. North-South Traffic (The Front Door)
+Traffic flowing from the public internet into the private cloud is called North-South traffic. This perimeter must be heavily guarded.
+1. **Global Load Balancer:** Solves *Networking & Infrastructure* problems. It intercepts the client's request at a global edge node, provides DDoS protection (Cloud Armor), terminates SSL, and routes the request to the geographically closest region.
+2. **API Gateway:** Solves *Business & Security* problems. It sits directly behind the Load Balancer, inspects the request payload, validates Authentication (JWT/API Keys), and enforces strict Rate Limiting quotas before allowing the request to enter the private cloud.
+
+### C. East-West Traffic (Internal Microservices)
+Traffic flowing *between* internal microservices (e.g., Service A calling Service B) is called East-West traffic.
+- **No API Gateways:** We do not place API Gateways between internal microservices. Doing so would add massive latency and overhead.
+- **Service Mesh:** Instead, internal services communicate directly within a secure **Service Mesh**. The mesh uses mTLS (Mutual TLS) to cryptographically verify the internal Google Cloud Service Account identities, allowing blazing-fast, zero-trust communication without the need for external token validation.
+
+*Complete Flow:* `Client (Frontend on User Device) -> Global Load Balancer -> API Gateway -> (Service Mesh [Service A] -> [Service B] -> Database)`
+
+## 6. Future Roadmap & Optimizations
 
 1. **Application-Layer CQRS:** Implementing the backend logic to seamlessly route `INSERT`/`UPDATE` queries to the primary node and load-balance `SELECT` queries across the read replicas.
 2. **Connection Pooling:** Introducing PgBouncer to manage connection exhaustion limits inherent to `db-f1-micro` instances.
